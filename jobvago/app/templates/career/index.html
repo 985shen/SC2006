@@ -1,0 +1,455 @@
+{% extends "base.html" %}
+
+{% block title %}Jobvago - Find Your Dream Job{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Stats Banner -->
+    <div class="stats-banner">
+        <div class="stat-item">
+            <div class="stat-number">{{ "{:,}".format(stats.total_vacancies) }}</div>
+            <div class="stat-label">Total Job Vacancies</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">{{ stats.top_industries }}</div>
+            <div class="stat-label">Top Growing Industries</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">{{ stats.total_courses }}+</div>
+            <div class="stat-label">SkillsFuture Courses</div>
+        </div>
+    </div>
+
+    <!-- Industries Section -->
+    <section class="industries-section">
+        <h2 class="section-title">
+            <span class="icon">🔍</span>
+            Top 10 Industries by Job Vacancies
+        </h2>
+        <p class="section-subtitle">Select an industry to view relevant SkillsFuture courses</p>
+
+        {% if industries_error %}
+        <div class="no-courses"><p>{{ industries_error }}</p></div>
+        {% else %}
+        <div class="industries-grid">
+            {% for industry in industries %}
+            <div class="industry-card {% if industry.name == selected_industry %}selected{% endif %}" 
+                 onclick="selectIndustry('{{ industry.name }}')">
+                <div class="industry-rank">#{{ loop.index }}</div>
+                <div class="industry-icon">{{ industry.icon }}</div>
+                <div class="industry-info">
+                    <h3 class="industry-name">{{ industry.name }}</h3>
+                    <div class="industry-stats">
+                        <span class="vacancies">Vacancies: <strong>{{ "{:,}".format(industry.vacancies) }}</strong></span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- Courses Section -->
+    <section class="courses-section">
+        <h2 class="section-title">
+            <span class="icon">📚</span>
+            SkillsFuture Courses for {{ selected_industry }}
+        </h2>
+        <p class="section-subtitle">{{ courses|length }} courses available - Subsidies up to 90% available for eligible Singaporeans</p>
+
+        <!-- Filters -->
+        <div class="filters">
+            <div class="filter-icon">⚙️</div>
+            <span class="filter-label">Filters</span>
+        </div>
+
+        <form method="GET" id="filterForm" class="filter-controls">
+            <div class="filter-group">
+                <label>Job Impact</label>
+                <select class="filter-select" name="impact_level" onchange="applyFilters()">
+                    <option {% if filters.impact_level == 'All Impact Levels' %}selected{% endif %}>All Impact Levels</option>
+                    <option {% if filters.impact_level == 'High Impact' %}selected{% endif %}>High Impact</option>
+                    <option {% if filters.impact_level == 'Medium Impact' %}selected{% endif %}>Medium Impact</option>
+                    <option {% if filters.impact_level == 'Low Impact' %}selected{% endif %}>Low Impact</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Course Mode</label>
+                <select class="filter-select" name="mode" onchange="applyFilters()">
+                    <option {% if filters.mode == 'All Modes' %}selected{% endif %}>All Modes</option>
+                    <option {% if filters.mode == 'Full-time' %}selected{% endif %}>Full-time</option>
+                    <option {% if filters.mode == 'Part-time' %}selected{% endif %}>Part-time</option>
+                    <option {% if filters.mode == 'Online' %}selected{% endif %}>Online</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Sort By</label>
+                <select class="filter-select" name="sort_by" onchange="applyFilters()">
+                    <option {% if filters.sort_by == 'Highest Rating' %}selected{% endif %}>Highest Rating</option>
+                    <option {% if filters.sort_by == 'Lowest Price' %}selected{% endif %}>Lowest Price</option>
+                    <option {% if filters.sort_by == 'Shortest Duration' %}selected{% endif %}>Shortest Duration</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Language</label>
+                <select class="filter-select" name="language" onchange="applyFilters()">
+                    <option {% if filters.language == 'All Languages' %}selected{% endif %}>All Languages</option>
+                    <option {% if filters.language == 'English' %}selected{% endif %}>English</option>
+                    <option {% if filters.language == 'Mandarin' %}selected{% endif %}>Mandarin</option>
+                    <option {% if filters.language == 'Malay' %}selected{% endif %}>Malay</option>
+                    <option {% if filters.language == 'Tamil' %}selected{% endif %}>Tamil</option>
+                    <option {% if filters.language == 'Others' %}selected{% endif %}>Others</option>
+                </select>
+            </div>
+        </form>
+
+        <!-- Courses Grid -->
+        {% if courses_error %}
+        <div class="no-courses"><p>{{ courses_error }}</p></div>
+        {% elif courses %}
+        <div class="courses-grid">
+            {% for course in courses %}
+            <div class="course-card">
+                <div class="course-header">
+                    <h3 class="course-title">
+                        <button class="course-title-btn"
+                                data-title="{{ course.title | e }}"
+                                data-outcomes="{{ (course.learning_outcomes or '') | e }}"
+                                data-prereqs="{{ (course.prerequisites or '') | e }}"
+                                onclick="openCourseModal(this)">
+                            {{ course.title }}
+                        </button>
+                    </h3>
+                    
+                    <!-- Favorite Button (only show if logged in) -->
+                    {% if current_user.is_authenticated %}
+                    <button class="btn-favorite {% if course.course_id in favorited_course_ids %}favorited{% endif %}"
+                            data-course-id="{{ course.course_id }}"
+                            data-title="{{ course.title | e }}"
+                            data-provider="{{ course.provider | e }}"
+                            data-language="{{ course.language | default('English') }}"
+                            onclick="toggleFavorite(event, this)">
+                        <span class="heart">❤</span>
+                    </button>
+                    {% endif %}
+                    
+                    <span class="impact-badge impact-{{ course.impact_level.lower().replace(' ', '-') }}">
+                        {{ course.impact_level }}
+                    </span>
+                </div>
+                
+                <p class="course-provider">{{ course.provider }}</p>
+                
+                <div class="course-meta">
+                    <span class="meta-item">
+                        <span class="icon">⏱️</span>
+                        {{ course.duration }}
+                    </span>
+                    <span class="meta-item">
+                        <span class="icon">📖</span>
+                        {{ course.mode }}
+                    </span>
+                    {% if course.language %}
+                    <span class="meta-item">
+                        <span class="icon">🌐</span>
+                        {{ course.language }}
+                    </span>
+                    {% endif %}
+                </div>
+
+                <div class="course-skills">
+                    {% for skill in course.skills %}
+                    <span class="skill-tag">{{ skill }}</span>
+                    {% endfor %}
+                </div>
+
+                <div class="course-rating">
+                    <span class="rating-star">⭐</span>
+                    <span class="rating-value">{{ course.rating }}</span>
+                    <span class="rating-count">👥 {{ "{:,}".format(course.reviews) }}</span>
+                </div>
+
+                <div class="course-footer">
+                    <div class="pricing">
+                        <div class="price-original">${{ "{:,}".format(course.price_original) }}</div>
+                        <div class="price-info">
+                            <span class="subsidy-text">{{ course.subsidy_text }}</span>
+                        </div>
+                    </div>
+                    <div class="price-final">
+                        <span class="from-text">From</span>
+                        <span class="price-amount">${{ "{:,}".format(course.price_subsidized) }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="no-courses">
+            <p>No courses found for this industry with the selected filters.</p>
+            <p>Try adjusting your filters or select a different industry.</p>
+        </div>
+        {% endif %}
+    </section>
+</div>
+
+<!-- Course Detail Modal -->
+<div id="courseModal" class="modal-overlay" onclick="closeCourseModal(event)">
+    <div class="modal-box">
+        <button class="modal-close" onclick="closeCourseModal()">&times;</button>
+        <h2 id="modalTitle" class="modal-title"></h2>
+
+        <div class="modal-section">
+            <h3 class="modal-section-title">📋 What You Will Learn</h3>
+            <div id="modalOutcomes" class="modal-content-text"></div>
+        </div>
+
+        <div class="modal-section">
+            <h3 class="modal-section-title">✅ Prerequisites</h3>
+            <div id="modalPrereqs" class="modal-content-text"></div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+    // Apply filters without page reload
+    function applyFilters() {
+        document.getElementById('filterForm').submit();
+    }
+
+    // Select industry and navigate
+    function selectIndustry(industryName) {
+        const currentFilters = new URLSearchParams(window.location.search);
+        window.location.href = `/industry/${encodeURIComponent(industryName)}?${currentFilters.toString()}`;
+    }
+
+    // Toggle favorite functionality
+    function toggleFavorite(event, btn) {
+        event.stopPropagation();
+        const courseId = btn.dataset.courseId;
+        const title    = btn.dataset.title;
+        const provider = btn.dataset.provider;
+        const language = btn.dataset.language || 'English';
+        const isFavorited = btn.classList.contains('favorited');
+        const url = isFavorited ? '/dashboard/favorites/remove' : '/dashboard/favorites/add';
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                course_id: courseId,
+                course_title: title,
+                course_provider: provider,
+                course_language: language
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                btn.classList.toggle('favorited');
+                showToast(isFavorited ? 'Removed from favorites' : 'Added to favorites');
+            } else {
+                console.error('Failed to update favorite:', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+
+    // Course detail modal
+    function openCourseModal(btn) {
+        const title    = btn.dataset.title    || '';
+        const outcomes = btn.dataset.outcomes || '';
+        const prereqs  = btn.dataset.prereqs  || '';
+
+        document.getElementById('modalTitle').textContent = title;
+
+        const outcomesEl = document.getElementById('modalOutcomes');
+        if (outcomes && outcomes.trim()) {
+            // Convert bullet-point text (lines starting with * or -) into an <ul>
+            const lines = outcomes.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+            const isList = lines.some(l => l.startsWith('*') || l.startsWith('-') || l.startsWith('\u2022'));
+            if (isList) {
+                outcomesEl.innerHTML = '<ul>' + lines.map(l => {
+                    const text = l.replace(/^[*\-\u2022]\s*/, '');
+                    return text ? `<li>${text}</li>` : '';
+                }).join('') + '</ul>';
+            } else {
+                outcomesEl.innerHTML = lines.map(l => `<p>${l}</p>`).join('');
+            }
+        } else {
+            outcomesEl.innerHTML = '<p class="modal-na">Not specified</p>';
+        }
+
+        const prereqsEl = document.getElementById('modalPrereqs');
+        if (prereqs && prereqs.trim()) {
+            prereqsEl.innerHTML = prereqs.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => `<p>${l}</p>`).join('');
+        } else {
+            prereqsEl.innerHTML = '<p class="modal-na">No prerequisites listed</p>';
+        }
+
+        document.getElementById('courseModal').classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeCourseModal(event) {
+        if (event && event.target !== document.getElementById('courseModal')) return;
+        document.getElementById('courseModal').classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            document.getElementById('courseModal').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+    });
+
+    // Toast notification
+    function showToast(message) {
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.classList.add('show');
+        }, 100);
+        
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                document.body.removeChild(toast);
+            }, 300);
+        }, 2000);
+    }
+</script>
+
+<style>
+
+.course-title-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    font-size: inherit;
+    font-weight: 600;
+    color: #1e293b;
+    text-align: left;
+    cursor: pointer;
+    line-height: 1.4;
+    transition: color 0.15s;
+}
+.course-title-btn:hover {
+    color: #4f46e5;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+/* Modal overlay */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(3px);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+.modal-overlay.active {
+    display: flex;
+}
+.modal-box {
+    background: #fff;
+    border-radius: 16px;
+    padding: 2rem 2rem 1.75rem;
+    max-width: 640px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    animation: modalIn 0.2s ease;
+}
+@keyframes modalIn {
+    from { transform: translateY(16px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+}
+.modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1.1rem;
+    background: none;
+    border: none;
+    font-size: 1.6rem;
+    line-height: 1;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.15s;
+}
+.modal-close:hover { color: #1e293b; }
+.modal-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 2rem 1.5rem 0;
+    line-height: 1.4;
+}
+.modal-section {
+    margin-bottom: 1.5rem;
+}
+.modal-section:last-child { margin-bottom: 0; }
+.modal-section-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #4f46e5;
+    margin: 0 0 0.6rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 2px solid #e0e7ff;
+}
+.modal-content-text p {
+    font-size: 0.92rem;
+    color: #374151;
+    margin: 0 0 0.5rem;
+    line-height: 1.6;
+}
+.modal-content-text ul {
+    margin: 0;
+    padding-left: 1.25rem;
+}
+.modal-content-text li {
+    font-size: 0.92rem;
+    color: #374151;
+    margin-bottom: 0.4rem;
+    line-height: 1.6;
+}
+.modal-na {
+    color: #9ca3af !important;
+    font-style: italic;
+}
+
+.no-courses {
+    text-align: center;
+    padding: 60px 20px;
+    background: white;
+    border-radius: 12px;
+}
+
+.no-courses p {
+    font-size: 1.1rem;
+    color: #6b7280;
+    margin-bottom: 12px;
+}
+</style>
+{% endblock %}

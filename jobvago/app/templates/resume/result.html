@@ -1,0 +1,343 @@
+{% extends "base.html" %}
+{% block title %}Resume Grade Results{% endblock %}
+{% block content %}
+
+{% set grade = analysis.get_grade_breakdown() %}
+
+<style>
+  .grade-page { max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
+
+  .score-hero {
+    text-align: center; padding: 2.5rem 1rem 2rem;
+    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 60%, #818cf8 100%);
+    border-radius: 16px; color: #fff; margin-bottom: 2rem;
+  }
+  [data-theme="dark"] .score-hero {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+  }
+  .score-hero h1 { font-size: 1.1rem; letter-spacing: .12em; text-transform: uppercase;
+                   opacity: .7; margin: 0 0 1.4rem; }
+  .ring-wrap { position: relative; width: 160px; height: 160px; margin: 0 auto 1rem; }
+  .ring-wrap svg { transform: rotate(-90deg); }
+  .ring-bg  { fill: none; stroke: rgba(255,255,255,.25); stroke-width: 12; }
+  [data-theme="dark"] .ring-bg { stroke: rgba(255,255,255,.15); }
+  .ring-fill{ fill: none; stroke-width: 12; stroke-linecap: round;
+              transition: stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1); }
+  .ring-num { position: absolute; inset: 0; display: flex; flex-direction: column;
+              align-items: center; justify-content: center; }
+  .ring-num .big { font-size: 2.8rem; font-weight: 700; line-height: 1; }
+  .ring-num .sub { font-size: .85rem; opacity: .6; }
+  .mode-badge { display: inline-block; margin-top: .6rem; padding: .25rem .85rem;
+                border-radius: 20px; font-size: .78rem; font-weight: 600; letter-spacing: .06em; }
+  .mode-ai   { background: rgba(99,102,241,.3); color: #a5b4fc; border: 1px solid rgba(99,102,241,.4); }
+  .mode-rule { background: rgba(245,158,11,.2); color: #fcd34d; border: 1px solid rgba(245,158,11,.35); }
+
+  .cat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+              gap: 1.1rem; margin-bottom: 2rem; }
+  .cat-card { background: #fff; border-radius: 12px;
+              box-shadow: 0 2px 12px rgba(0,0,0,.07);
+              padding: 1.3rem 1.4rem; border-top: 4px solid var(--cat-color); }
+  .cat-card h3 { font-size: .95rem; font-weight: 700; text-transform: uppercase;
+                 letter-spacing: .08em; color: var(--cat-color); margin: 0 0 .7rem; }
+  .cat-score-row { display: flex; align-items: baseline; gap: .4rem; margin-bottom: .7rem; }
+  .cat-pts { font-size: 2rem; font-weight: 800; color: #1e293b; }
+  .cat-max { font-size: .9rem; color: #94a3b8; }
+  .cat-bar-bg  { height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
+  .cat-bar-fill{ height: 100%; border-radius: 4px; background: var(--cat-color);
+                 transition: width 1s cubic-bezier(.4,0,.2,1); }
+
+  .breakdown-section { margin-bottom: 2.5rem; }
+  .breakdown-section h2 { font-size: 1rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .1em; color: var(--cat-color);
+    border-left: 4px solid var(--cat-color); padding-left: .75rem; margin-bottom: 1rem; }
+  .sub-list { display: flex; flex-direction: column; gap: .6rem; }
+  .sub-item { background: #f8fafc; border-radius: 10px; padding: .9rem 1.1rem;
+              display: grid; grid-template-columns: 1fr auto; align-items: start; gap: .5rem; }
+  .sub-name   { font-size: .88rem; font-weight: 600; color: #334155; margin-bottom: .25rem; }
+  .sub-detail { font-size: .78rem; color: #64748b; }
+  .sub-pts    { font-size: 1rem; font-weight: 700; color: #1e293b; text-align: right; white-space: nowrap; }
+  .sub-pts span { font-size: .75rem; font-weight: 400; color: #94a3b8; }
+  .sub-bar-bg  { grid-column: 1 / -1; height: 5px; background: #e2e8f0; border-radius: 3px; overflow: hidden; }
+  .sub-bar-fill{ height: 100%; border-radius: 3px; background: var(--cat-color); }
+
+  .ai-tag   { display: inline-block; font-size: .68rem; font-weight: 700; letter-spacing: .05em;
+              padding: .1rem .45rem; border-radius: 4px; margin-left: .4rem;
+              background: rgba(99,102,241,.12); color: #6366f1; border: 1px solid rgba(99,102,241,.25); }
+  .rule-tag { display: inline-block; font-size: .68rem; font-weight: 700; letter-spacing: .05em;
+              padding: .1rem .45rem; border-radius: 4px; margin-left: .4rem;
+              background: rgba(245,158,11,.1); color: #d97706; border: 1px solid rgba(245,158,11,.25); }
+
+  .chip-list { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .4rem; }
+  .chip     { font-size: .72rem; padding: .2rem .55rem; border-radius: 20px;
+              background: #e0f2fe; color: #0369a1; font-weight: 500; }
+  .chip.bad { background: #fee2e2; color: #b91c1c; }
+
+  .result-actions { display: flex; gap: 1rem; justify-content: center; margin-top: 2rem; flex-wrap: wrap; }
+  .btn-primary, .btn-secondary { padding: .7rem 1.6rem; border-radius: 8px; font-weight: 600;
+                                  font-size: .92rem; text-decoration: none; transition: opacity .2s; }
+  .btn-primary  { background: #6366f1; color: #fff; }
+  .btn-secondary{ background: #e2e8f0; color: #334155; }
+  .btn-primary:hover, .btn-secondary:hover { opacity: .85; }
+
+  .impact-col       { --cat-color: #6366f1; }
+  .presentation-col { --cat-color: #10b981; }
+  .competencies-col { --cat-color: #f59e0b; }
+</style>
+
+<div class="grade-page">
+
+{% if grade %}
+
+  {# ── Hero score ring ── #}
+  {% set circ = 408 %}
+  {% set offset = circ - (circ * grade.total / 100) %}
+  {% if grade.total >= 75 %}{% set ring_color = "#10b981" %}
+  {% elif grade.total >= 50 %}{% set ring_color = "#f59e0b" %}
+  {% else %}{% set ring_color = "#ef4444" %}{% endif %}
+
+  <div class="score-hero">
+    <h1>Resume Score</h1>
+    <div class="ring-wrap">
+      <svg width="160" height="160" viewBox="0 0 160 160">
+        <circle class="ring-bg" cx="80" cy="80" r="65"/>
+        <circle class="ring-fill" cx="80" cy="80" r="65"
+          stroke="{{ ring_color }}"
+          stroke-dasharray="{{ circ }}"
+          stroke-dashoffset="{{ offset }}"
+          id="mainRing"/>
+      </svg>
+      <div class="ring-num">
+        <span class="big">{{ grade.total }}</span>
+        <span class="sub">/ 100</span>
+      </div>
+    </div>
+    {% if grade.ollama_online %}
+      <span class="mode-badge mode-ai">&#10022; AI-Enhanced</span>
+    {% else %}
+      <span class="mode-badge mode-rule">&#9881; Standard Analysis</span>
+    {% endif %}
+  </div>
+
+  {# ── 3 category cards ── #}
+  <div class="cat-grid">
+    <div class="cat-card impact-col">
+      <h3>Impact</h3>
+      <div class="cat-score-row">
+        <span class="cat-pts">{{ grade.impact.score }}</span>
+        <span class="cat-max">/ 40</span>
+      </div>
+      <div class="cat-bar-bg">
+        <div class="cat-bar-fill" data-pct="{{ (grade.impact.score / 40 * 100)|int  }}"></div>
+      </div>
+    </div>
+    <div class="cat-card presentation-col">
+      <h3>Presentation</h3>
+      <div class="cat-score-row">
+        <span class="cat-pts">{{ grade.presentation.score }}</span>
+        <span class="cat-max">/ 30</span>
+      </div>
+      <div class="cat-bar-bg">
+        <div class="cat-bar-fill" data-pct="{{ (grade.presentation.score / 30 * 100)|int  }}"></div>
+      </div>
+    </div>
+    <div class="cat-card competencies-col">
+      <h3>Competencies</h3>
+      <div class="cat-score-row">
+        <span class="cat-pts">{{ grade.competencies.score }}</span>
+        <span class="cat-max">/ 30</span>
+      </div>
+      <div class="cat-bar-bg">
+        <div class="cat-bar-fill" data-pct="{{ (grade.competencies.score / 30 * 100)|int  }}"></div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Impact breakdown ── #}
+  <div class="breakdown-section impact-col">
+    <h2>Impact Breakdown</h2>
+    <div class="sub-list">
+
+      {% set s = grade.impact.breakdown.action_oriented %}
+      <div class="sub-item">
+        <div>
+          <div class="sub-name">Action-Oriented</div>
+          <div class="sub-detail">{{ s.details }}</div>
+          {% if s.found %}
+          <div class="chip-list">{% for v in s.found[:12] %}<span class="chip">{{ v }}</span>{% endfor %}</div>
+          {% endif %}
+        </div>
+        <div class="sub-pts">{{ s.points }}<span> / {{ s.max }}</span></div>
+        <div class="sub-bar-bg"><div class="sub-bar-fill" data-pct="{{ (s.points/s.max*100)|int  }}"></div></div>
+      </div>
+
+      {% set s = grade.impact.breakdown.specifics %}
+      <div class="sub-item">
+        <div>
+          <div class="sub-name">Specifics &amp; Metrics</div>
+          <div class="sub-detail">{{ s.details }}</div>
+        </div>
+        <div class="sub-pts">{{ s.points }}<span> / {{ s.max }}</span></div>
+        <div class="sub-bar-bg"><div class="sub-bar-fill" data-pct="{{ (s.points/s.max*100)|int  }}"></div></div>
+      </div>
+
+      {% set s = grade.impact.breakdown.over_usage %}
+      <div class="sub-item">
+        <div>
+          <div class="sub-name">Word Over-Usage</div>
+          <div class="sub-detail">{{ s.details }}</div>
+          {% if s.repeated_words %}
+          <div class="chip-list">{% for w, c in s.repeated_words %}<span class="chip bad">{{ w }} x{{ c }}</span>{% endfor %}</div>
+          {% endif %}
+        </div>
+        <div class="sub-pts">{{ s.points }}<span> / {{ s.max }}</span></div>
+        <div class="sub-bar-bg"><div class="sub-bar-fill" data-pct="{{ (s.points/s.max*100)|int  }}"></div></div>
+      </div>
+
+      {% set s = grade.impact.breakdown.avoided_words %}
+      <div class="sub-item">
+        <div>
+          <div class="sub-name">Avoided Filler Words</div>
+          <div class="sub-detail">{{ s.details }}</div>
+          {% if s.flagged_words %}
+          <div class="chip-list">{% for w, c in s.flagged_words.items() %}<span class="chip bad">"{{ w }}" x{{ c }}</span>{% endfor %}</div>
+          {% endif %}
+        </div>
+        <div class="sub-pts">{{ s.points }}<span> / {{ s.max }}</span></div>
+        <div class="sub-bar-bg"><div class="sub-bar-fill" data-pct="{{ (s.points/s.max*100)|int  }}"></div></div>
+      </div>
+
+      {% set s = grade.impact.breakdown.positions_of_responsibility %}
+      <div class="sub-item">
+        <div>
+          <div class="sub-name">Positions of Responsibility
+            {% if s.ai_graded %}<span class="ai-tag">AI</span>{% else %}{% endif %}
+          </div>
+          <div class="sub-detail">{{ s.details }}</div>
+        </div>
+        <div class="sub-pts">{{ s.points }}<span> / {{ s.max }}</span></div>
+        <div class="sub-bar-bg"><div class="sub-bar-fill" data-pct="{{ (s.points/s.max*100)|int  }}"></div></div>
+      </div>
+
+      {% set s = grade.impact.breakdown.extracurricular %}
+      <div class="sub-item">
+        <div>
+          <div class="sub-name">Extra-Curricular Activities
+            {% if s.ai_graded %}<span class="ai-tag">AI</span>{% else %}{% endif %}
+          </div>
+          <div class="sub-detail">{{ s.details }}</div>
+        </div>
+        <div class="sub-pts">{{ s.points }}<span> / {{ s.max }}</span></div>
+        <div class="sub-bar-bg"><div class="sub-bar-fill" data-pct="{{ (s.points/s.max*100)|int  }}"></div></div>
+      </div>
+
+    </div>
+  </div>
+
+  {# ── Presentation breakdown ── #}
+  <div class="breakdown-section presentation-col">
+    <h2>Presentation Breakdown</h2>
+    <div class="sub-list">
+
+      {% set s = grade.presentation.breakdown.page_count %}
+      <div class="sub-item">
+        <div>
+          <div class="sub-name">Number of Pages</div>
+          <div class="sub-detail">{{ s.details }}</div>
+        </div>
+        <div class="sub-pts">{{ s.points }}<span> / {{ s.max }}</span></div>
+        <div class="sub-bar-bg"><div class="sub-bar-fill" data-pct="{{ (s.points/s.max*100)|int  }}"></div></div>
+      </div>
+
+      {% set s = grade.presentation.breakdown.contact_info %}
+      <div class="sub-item">
+        <div>
+          <div class="sub-name">Contact Information</div>
+          <div class="sub-detail">{{ s.details }}</div>
+        </div>
+        <div class="sub-pts">{{ s.points }}<span> / {{ s.max }}</span></div>
+        <div class="sub-bar-bg"><div class="sub-bar-fill" data-pct="{{ (s.points/s.max*100)|int  }}"></div></div>
+      </div>
+
+      {% set s = grade.presentation.breakdown.spell_check %}
+      <div class="sub-item">
+        <div>
+          <div class="sub-name">Spell Check</div>
+          <div class="sub-detail">{{ s.details }}</div>
+          {% if s.errors %}
+          <div class="chip-list">{% for w in s.errors %}<span class="chip bad">{{ w }}</span>{% endfor %}</div>
+          {% endif %}
+        </div>
+        <div class="sub-pts">{{ s.points }}<span> / {{ s.max }}</span></div>
+        <div class="sub-bar-bg"><div class="sub-bar-fill" data-pct="{{ (s.points/s.max*100)|int  }}"></div></div>
+      </div>
+
+    </div>
+  </div>
+
+  {# ── Competencies breakdown ── #}
+  <div class="breakdown-section competencies-col">
+    <h2>Competencies Breakdown</h2>
+    <div class="sub-list">
+      {% set comp_labels = [
+        ('analytical',    'Analytical Skills'),
+        ('communication', 'Communication Skills'),
+        ('leadership',    'Leadership Skills'),
+        ('teamwork',      'Teamwork Skills'),
+        ('initiative',    'Initiative Skills')
+      ] %}
+      {% for key, label in comp_labels %}
+        {% if key in grade.competencies.breakdown %}
+          {% set s = grade.competencies.breakdown[key] %}
+          <div class="sub-item">
+            <div>
+              <div class="sub-name">{{ label }}
+                {% if s.ai_graded %}<span class="ai-tag">AI</span>{% else %}{% endif %}
+              </div>
+              <div class="sub-detail">{{ s.details }}</div>
+              {% if not s.ai_graded and s.matched_keywords %}
+              <div class="chip-list">{% for kw in s.matched_keywords %}<span class="chip">{{ kw }}</span>{% endfor %}</div>
+              {% endif %}
+            </div>
+            <div class="sub-pts">{{ s.points }}<span> / {{ s.max }}</span></div>
+            <div class="sub-bar-bg"><div class="sub-bar-fill" data-pct="{{ (s.points/s.max*100)|int  }}"></div></div>
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+{% else %}
+  {# Legacy fallback when no grade data exists #}
+  <div class="score-hero">
+    <h1>Resume Analysis</h1>
+    <div style="font-size:3rem;font-weight:800;padding:1rem 0;">{{ analysis.score }}<span style="font-size:1.2rem;opacity:.6"> / 10</span></div>
+  </div>
+  <div style="background:#fff;border-radius:12px;padding:1.4rem;box-shadow:0 2px 12px rgba(0,0,0,.07);margin-bottom:1.5rem;">
+    <h3 style="margin:0 0 .6rem;">Feedback</h3>
+    <p>{{ analysis.feedback }}</p>
+  </div>
+{% endif %}
+
+  <div class="result-actions">
+    <a href="{{ url_for('resume.upload') }}" class="btn-primary">Analyse Another Resume</a>
+    <a href="{{ url_for('dashboard.index') }}" class="btn-secondary">Back to Dashboard</a>
+  </div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Animate score ring
+  var ring = document.getElementById('mainRing');
+  if (ring) {
+    var target = ring.getAttribute('stroke-dashoffset');
+    ring.style.strokeDashoffset = ring.getAttribute('stroke-dasharray');
+    setTimeout(function() { ring.style.strokeDashoffset = target; }, 50);
+  }
+  // Fill progress bars
+  document.querySelectorAll('[data-pct]').forEach(function(el) {
+    el.style.width = el.getAttribute('data-pct') + '%';
+  });
+});
+</script>
+{% endblock %}
