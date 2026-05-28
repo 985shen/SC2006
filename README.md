@@ -195,7 +195,3 @@ The grading system scores resumes out of 100 across 14 sub-categories:
 | SkillsFuture course directory | [data.gov.sg](https://api-open.data.gov.sg/v1/public/api/datasets/d_b5802b76f409764c16dde4bf2feb19cd/poll-download) | Excel |
 
 ---
-
-## License
-
-This project was built as a university coursework submission for a Software Engineering module. Feel free to reference or learn from the code.
