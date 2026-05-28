@@ -1,0 +1,1 @@
+# TODO: Implement User model (id, email, password_hash, full_name, created_at, last_login, current_resume_path, resume_uploaded_at) and methods: set_password, check_password, update_last_login, add_favorite_course, remove_favorite_course, get_favorites, get_latest_analysis, etc.
