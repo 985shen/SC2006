@@ -17,11 +17,6 @@ Built with Flask, SQLite, and vanilla JavaScript. Data is sourced live from two 
 
 ---
 
-## Demo video
-[Video] (lab4/app%20demo%20video.mp4.zip)
-
----
-
 ## Features
 
 ### Industry Dashboard
