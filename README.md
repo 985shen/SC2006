@@ -1,4 +1,4 @@
-# SC2006 Software Engineering
+# SC2006 - Software Engineering
 
 ---
 
