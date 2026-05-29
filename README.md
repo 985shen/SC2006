@@ -1,5 +1,12 @@
 # SC2006 - Software Engineering
 
+## Members
+- Ho Sheng Wei
+- Loh Gan Sui
+- Ong Jee Shen
+- Pan YiFan
+- Wang QinYan
+
 ---
 
 ## JobVago
