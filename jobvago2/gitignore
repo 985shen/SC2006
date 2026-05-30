@@ -1,0 +1,48 @@
+# Database
+instance/
+*.db
+*.sqlite
+*.sqlite3
+
+# Uploaded files (resume PDFs land in uploads/ and uploads/resumes/)
+uploads/
+
+# Cached API data
+cache/
+CSV/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+.pytest_cache/
+
+# Python build / packaging artifacts (from setup.py build_ext)
+build/
+dist/
+*.egg
+*.egg-info/
+
+# Native jvfast extension (compiled locally; optional, never committed)
+app/native/jvfast*.so
+app/native/jvfast*.pyd
+*.so
+*.pyd
+
+# Node / Tailwind toolchain (compiled app/static/css/app.css is committed; node_modules is not)
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Environment / secrets
+.env
+.env.*
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
