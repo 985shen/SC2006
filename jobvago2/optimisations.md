@@ -1,4 +1,4 @@
-# Performance Optimizations
+# Performance Optimisations
 
 This document describes the performance work done on jobvago: what was slow,
 what changed, and the measured impact. The guiding constraint throughout was
