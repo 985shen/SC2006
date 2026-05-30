@@ -209,6 +209,7 @@ python3 -c "from app.services._fast import NATIVE_AVAILABLE; print(NATIVE_AVAILA
 
 Behaviour is identical with or without the extension, and the full test suite passes either way. See [`optimisations.md`](optimisations.md) for the measured before/after numbers.
 
+![Course-filter latency: optimisation on vs off](jobvago2/optimisation_benchmark.png)
 
 ### Run Tests
 
