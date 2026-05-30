@@ -15,6 +15,9 @@ A career guidance web application that connects Singapore's job market data with
 
 Built with Flask, SQLite, and vanilla JavaScript. Data is sourced live from two Singapore government APIs.
 
+## Demo video
+[![Demo video] (https://github.com/985shen/SC2006/blob/main/lab4/app%20demo%20video.mp4.zip)]
+
 ---
 
 ## Features
