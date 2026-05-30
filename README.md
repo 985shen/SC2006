@@ -191,6 +191,7 @@ ollama serve
 
 The app auto-detects Ollama at `http://localhost:11434`. If unavailable, all grading falls back to rule-based analysis — no configuration needed.
 
+
 ### Optional: Native Acceleration
 
 The course-filtering and résumé-grading keyword matching can run in a small C++ extension (`jvfast`, Aho-Corasick) for a large speedup on the per-request course filter. This step is **optional** — if you skip it, the app runs exactly the same on a pure-Python fallback, just slower on those paths.
@@ -207,6 +208,7 @@ python3 -c "from app.services._fast import NATIVE_AVAILABLE; print(NATIVE_AVAILA
 ```
 
 Behaviour is identical with or without the extension, and the full test suite passes either way. See [`optimisations.md`](optimisations.md) for the measured before/after numbers.
+
 
 ### Run Tests
 
