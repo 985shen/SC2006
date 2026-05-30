@@ -1,6 +1,8 @@
 # Jobvago2
 
-- Visual and performance enhancements over Jobvago
+- Visual and performance enhancements over Jobvago, see [`README.md`](README.md/..) for more information
+
+---
 
 # Getting Started
 
