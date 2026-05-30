@@ -15,7 +15,7 @@ A career guidance web application that connects Singapore's job market data with
 
 Built with Flask, SQLite, Tailwind CSS, and vanilla JavaScript. Data is sourced live from two Singapore government APIs.
 
-![JobVago dashboard](image.jpg)
+![JobVago dashboard](jobvago2/dashboard.jpeg)
 
 ---
 
