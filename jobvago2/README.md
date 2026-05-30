@@ -1,3 +1,7 @@
+# Jobvago2
+
+- Visual and performance enhancements over Jobvago
+
 # Getting Started
 
 ## Prerequisites
