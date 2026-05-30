@@ -1,0 +1,134 @@
+{% from "_icons.html" import icon %}
+<!DOCTYPE html>
+<html lang="en" data-theme="jobvago">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Jobvago - Career Navigator{% endblock %}</title>
+
+    <!-- Set theme before paint to avoid a flash of the wrong theme -->
+    <script>
+        (function () {
+            var t = localStorage.getItem('theme');
+            document.documentElement.setAttribute('data-theme', t === 'dark' ? 'jobvago-dark' : 'jobvago');
+        })();
+    </script>
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='icons/favicon.ico') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='icons/favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='icons/favicon-16x16.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+
+    <!-- Distinctive type pairing: Bricolage Grotesque (display) + Hanken Grotesk (body) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="min-h-screen flex flex-col bg-base-100 text-base-content antialiased">
+
+    <!-- Header -->
+    <header class="sticky top-0 z-50 border-b border-base-300/70 bg-base-100/80 backdrop-blur-md">
+        <div class="mx-auto max-w-6xl px-4">
+            <div class="flex h-[4.5rem] items-center justify-between gap-3">
+                <!-- Logo -->
+                <a href="{{ url_for('career.index') }}" class="group flex items-center gap-3">
+                    <span class="grid h-11 w-11 place-items-center overflow-hidden rounded-xl bg-base-200 ring-1 ring-base-300 transition group-hover:ring-primary/50">
+                        <img src="{{ url_for('static', filename='icons/logo.png') }}" alt="Jobvago" class="h-7 w-7 object-contain">
+                    </span>
+                    <span class="leading-tight">
+                        <span class="block font-display text-xl font-extrabold tracking-tight text-base-content">Jobvago</span>
+                        <span class="hidden text-[0.7rem] font-medium text-base-content/55 sm:block">Find in-demand jobs &amp; relevant courses</span>
+                    </span>
+                </a>
+
+                <!-- Nav -->
+                <nav class="flex items-center gap-1 sm:gap-2">
+                    {% if current_user.is_authenticated %}
+                        <a href="{{ url_for('dashboard.index') }}" class="btn btn-ghost btn-sm gap-2 font-semibold">
+                            {{ icon("layout-dashboard", "h-4 w-4") }}<span class="hidden sm:inline">Dashboard</span>
+                        </a>
+                        <a href="{{ url_for('resume.upload') }}" class="btn btn-ghost btn-sm gap-2 font-semibold">
+                            {{ icon("file-text", "h-4 w-4") }}<span class="hidden sm:inline">Analyze Resume</span>
+                        </a>
+                        <div class="dropdown dropdown-end">
+                            <div tabindex="0" role="button" class="btn btn-ghost btn-sm gap-2">
+                                <span class="grid h-7 w-7 place-items-center rounded-full bg-primary/15 text-sm font-bold text-primary">
+                                    {{ current_user.full_name[:1]|upper }}
+                                </span>
+                                <span class="hidden max-w-[10rem] truncate font-semibold md:inline">{{ current_user.full_name }}</span>
+                            </div>
+                            <ul tabindex="0" class="menu dropdown-content z-[60] mt-3 w-52 rounded-box border border-base-300 bg-base-100 p-2 shadow-xl">
+                                <li class="menu-title text-xs">{{ current_user.full_name }}</li>
+                                <li><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+                                <li><a href="{{ url_for('dashboard.analyses') }}">My Analyses</a></li>
+                                <li><a href="{{ url_for('resume.upload') }}">Resume Tools</a></li>
+                                <li><a href="{{ url_for('auth.logout') }}" class="text-error">Logout</a></li>
+                            </ul>
+                        </div>
+                    {% else %}
+                        <a href="{{ url_for('auth.login') }}" class="btn btn-ghost btn-sm font-semibold">Login</a>
+                        <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-sm font-semibold shadow-sm">Sign Up</a>
+                    {% endif %}
+
+                    <!-- Theme toggle -->
+                    <button id="themeToggle" onclick="toggleTheme()" class="btn btn-ghost btn-circle btn-sm" title="Switch theme" aria-label="Switch theme">
+                        <span class="theme-icon theme-icon-moon">{{ icon("moon", "h-5 w-5") }}</span>
+                        <span class="theme-icon theme-icon-sun">{{ icon("sun", "h-5 w-5") }}</span>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="mx-auto mt-4 w-full max-w-6xl px-4">
+                {% for category, message in messages %}
+                    {% set tone = {'error':'alert-error','danger':'alert-error','warning':'alert-warning','success':'alert-success','info':'alert-info'}.get(category, 'alert-info') %}
+                    <div role="alert" class="alert {{ tone }} mb-2 shadow-sm">
+                        <span class="font-medium">{{ message }}</span>
+                        <button class="btn btn-ghost btn-xs btn-circle" onclick="this.parentElement.remove()" aria-label="Dismiss">{{ icon("x", "h-4 w-4") }}</button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Main content -->
+    <main class="flex-1">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-16 border-t border-base-300/70 bg-base-200/40">
+        <div class="mx-auto flex max-w-6xl flex-col items-center gap-1 px-4 py-8 text-center">
+            <span class="font-display text-sm font-bold tracking-tight">Jobvago</span>
+            <p class="text-xs text-base-content/55">Data from Singapore Government APIs · SkillsFuture Singapore</p>
+        </div>
+    </footer>
+
+    {% block extra_js %}{% endblock %}
+
+    <script>
+        function applyThemeIcon() {
+            // Icon glyphs (moon/sun) are swapped purely via CSS keyed on the
+            // documentElement's data-theme; here we only update the tooltip.
+            var dark = document.documentElement.getAttribute('data-theme') === 'jobvago-dark';
+            var btn = document.getElementById('themeToggle');
+            if (btn) btn.title = dark ? 'Switch to light mode' : 'Switch to dark mode';
+        }
+        function toggleTheme() {
+            var dark = document.documentElement.getAttribute('data-theme') === 'jobvago-dark';
+            document.documentElement.setAttribute('data-theme', dark ? 'jobvago' : 'jobvago-dark');
+            localStorage.setItem('theme', dark ? 'light' : 'dark');
+            applyThemeIcon();
+        }
+        document.addEventListener('DOMContentLoaded', applyThemeIcon);
+    </script>
+</body>
+</html>

@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon, icon_filled %}
+{% block title %}Dashboard · Jobvago{% endblock %}
+{% block extra_css %}
+<style>
+  /* Root cause of "description flashes then page stays blurry": the overlay's
+     backdrop-filter blur dropped the panel's open animation, leaving the panel
+     stuck at opacity:0 over a still-blurred backdrop. Drop the blur for a plain
+     dim (no GPU compositing bug) and force the panel fully opaque. */
+  .modal-overlay {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: rgba(15, 23, 42, 0.55) !important;
+  }
+  .modal-box { animation: none !important; opacity: 1 !important; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-6xl px-4 py-8">
+
+  <!-- Header -->
+  <div class="reveal">
+    <h1 class="font-display text-3xl font-extrabold tracking-tight">Welcome, {{ current_user.full_name }}! 👋</h1>
+    <p class="mt-1 text-base-content/60">Manage your career development journey</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <div class="rounded-2xl border border-base-300 bg-base-100 p-5 shadow-sm">
+      <div class="text-gradient font-display text-4xl font-extrabold">{{ total_favorites }}</div>
+      <div class="mt-1 text-sm font-medium text-base-content/60">Favorite courses</div>
+    </div>
+    <div class="rounded-2xl border border-base-300 bg-base-100 p-5 shadow-sm">
+      <div class="text-gradient font-display text-4xl font-extrabold">{{ total_analyses }}</div>
+      <div class="mt-1 text-sm font-medium text-base-content/60">Resume analyses</div>
+    </div>
+    {% if latest_analysis %}
+    <div class="rounded-2xl border border-base-300 bg-base-100 p-5 shadow-sm">
+      <div class="text-gradient font-display text-4xl font-extrabold">{{ latest_analysis.grade_total if latest_analysis.grade_total is not none else latest_analysis.score * 10 }}<span class="text-2xl text-base-content/40">/100</span></div>
+      <div class="mt-1 text-sm font-medium text-base-content/60">Latest score</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Favorites -->
+  <section class="mt-12">
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <h2 class="font-display text-2xl font-bold tracking-tight">Your Favorite Courses</h2>
+      {% if favorites %}
+      <label class="flex items-center gap-2 text-sm">
+        <span class="text-base-content/60">Language</span>
+        <select id="langFilter" class="select select-bordered select-sm" onchange="filterFavorites()">
+          <option value="all">All Languages</option>
+          <option value="English">English</option>
+          <option value="Mandarin">Mandarin</option>
+          <option value="Malay">Malay</option>
+          <option value="Tamil">Tamil</option>
+          <option value="Others">Others</option>
+        </select>
+      </label>
+      {% endif %}
+    </div>
+
+    {% if favorites %}
+    <div id="favoritesGrid" class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {% for fav in favorites %}
+      {% set fav_course = course_map.get(fav.course_id) %}
+      <div class="favorite-card lift flex flex-col rounded-2xl border border-base-300 bg-base-100 p-5 shadow-sm hover:shadow-lg" data-language="{{ fav.course_language or 'English' }}">
+        <h4 class="font-display text-base font-bold leading-snug">
+          <button class="card-title-btn text-left transition hover:text-primary"
+                  data-title="{{ fav.course_title | e }}"
+                  data-outcomes="{{ (fav_course.learning_outcomes if fav_course else '') | e }}"
+                  data-prereqs="{{ (fav_course.prerequisites if fav_course else '') | e }}"
+                  onclick="openDashModal(this)">{{ fav.course_title }}</button>
+        </h4>
+        <p class="mt-1 text-sm text-base-content/60">{{ fav.course_provider }}</p>
+        <p class="course-meta mt-2 flex items-center gap-1 text-xs text-base-content/55">{{ icon("globe", "h-4 w-4") }} {{ fav.course_language or 'English' }}</p>
+        <button onclick="removeFavorite('{{ fav.course_id }}')" class="btn btn-outline btn-error btn-sm mt-4 self-start">Remove</button>
+      </div>
+      {% endfor %}
+    </div>
+    <p id="noFavMessage" class="mt-4 hidden text-sm text-base-content/55">No favorites match the selected language.</p>
+    {% else %}
+    <div class="mt-5 rounded-2xl border border-dashed border-base-300 bg-base-200/40 px-6 py-12 text-center text-base-content/60">
+      No favorites yet. Browse courses and tap the heart icon to save them here.
+    </div>
+    {% endif %}
+  </section>
+
+  <!-- Latest analysis -->
+  {% if latest_analysis %}
+  <section class="mt-12">
+    <h2 class="font-display text-2xl font-bold tracking-tight">Latest Resume Analysis</h2>
+    <div class="mt-5 flex flex-col items-start gap-6 rounded-2xl border border-base-300 bg-base-100 p-6 shadow-sm sm:flex-row sm:items-center">
+      <div class="grid h-28 w-28 shrink-0 place-items-center rounded-full bg-primary/10 ring-4 ring-primary/15">
+        <span class="font-display text-4xl font-extrabold text-primary leading-none">{{ latest_analysis.grade_total if latest_analysis.grade_total is not none else latest_analysis.score * 10 }}</span>
+        <span class="text-xs text-base-content/50">/ 100</span>
+      </div>
+      <div class="min-w-0 flex-1">
+        <p class="font-semibold">{{ latest_analysis.filename }}</p>
+        {% if latest_analysis.grade_total is not none %}
+        <div class="mt-3 flex flex-wrap gap-2">
+          <span class="badge badge-primary badge-outline gap-1 font-semibold">Impact {{ latest_analysis.grade_impact }}/40</span>
+          <span class="badge badge-success badge-outline gap-1 font-semibold">Presentation {{ latest_analysis.grade_presentation }}/30</span>
+          <span class="badge badge-warning badge-outline gap-1 font-semibold">Competencies {{ latest_analysis.grade_competencies }}/30</span>
+        </div>
+        {% else %}
+        <p class="mt-2 text-sm text-base-content/65">{{ latest_analysis.feedback[:200] }}...</p>
+        {% endif %}
+        <a href="{{ url_for('resume.result', analysis_id=latest_analysis.id) }}" class="btn btn-primary btn-sm mt-4">View full analysis</a>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- Skills profile -->
+  {% if user_skills %}
+  <section class="mt-12">
+    <h2 class="flex items-center gap-2 font-display text-2xl font-bold tracking-tight">{{ icon("brain", "h-6 w-6 text-primary") }} Your Skills Profile</h2>
+    <p class="mt-1 flex flex-wrap items-center gap-2 text-sm text-base-content/60">
+      Extracted from your resume via
+      {% if user_skills[0].source == 'deepseek' %}
+        <span class="badge badge-secondary badge-sm gap-1 font-semibold">{{ icon("sparkles", "h-3.5 w-3.5") }} DeepSeek AI</span>
+      {% else %}
+        <span class="badge badge-info badge-sm gap-1 font-semibold">{{ icon("search", "h-3.5 w-3.5") }} Keyword Analysis</span>
+      {% endif %}
+    </p>
+    {% set categories = user_skills | map(attribute='category') | unique | list %}
+    <div class="mt-5 flex flex-col gap-4">
+      {% for cat in categories %}
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-start">
+        <span class="w-32 shrink-0 pt-1 text-xs font-bold uppercase tracking-wide text-base-content/50">{{ cat }}</span>
+        <div class="flex flex-wrap gap-2">
+          {% for s in user_skills if s.category == cat %}
+          <span class="badge badge-outline border-primary/40 text-primary">{{ s.skill }}</span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- Recommended courses -->
+  {% if recommended_courses %}
+  <section class="mt-12">
+    <h2 class="flex items-center gap-2 font-display text-2xl font-bold tracking-tight">{{ icon("lightbulb", "h-6 w-6 text-primary") }} Recommended Courses for You</h2>
+    <p class="mt-1 text-sm text-base-content/60">Courses whose prerequisites match your resume skills</p>
+    <div class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {% for course in recommended_courses %}
+      {% set prereq_lower = (course.prerequisites or '') | lower %}
+      {% set matched = [] %}
+      {% for s in user_skills if s.skill | lower in prereq_lower %}
+        {% if matched.append(s.skill) %}{% endif %}
+      {% endfor %}
+      {% set impact_tone = {'High Impact':'badge-success','Medium Impact':'badge-warning','Low Impact':'badge-ghost'}.get(course.impact_level, 'badge-ghost') %}
+      <div class="lift flex flex-col rounded-2xl border border-base-300 bg-base-100 p-5 shadow-sm hover:shadow-lg">
+        <div class="flex justify-end">
+          <span class="badge {{ impact_tone }} badge-sm font-semibold">{{ course.impact_level }}</span>
+        </div>
+        <h4 class="mt-2 font-display text-base font-bold leading-snug">
+          <button class="card-title-btn text-left transition hover:text-primary"
+                  data-title="{{ course.title | e }}"
+                  data-outcomes="{{ (course.learning_outcomes or '') | e }}"
+                  data-prereqs="{{ (course.prerequisites or '') | e }}"
+                  onclick="openDashModal(this)">{{ course.title }}</button>
+        </h4>
+        <p class="mt-1 text-sm text-base-content/60">{{ course.provider }}</p>
+        <div class="course-meta mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-base-content/55">
+          <span>{{ icon("clock", "h-4 w-4") }} {{ course.duration }}</span>
+          <span class="text-warning">{{ icon_filled("star", "h-4 w-4") }} {{ course.rating }}</span>
+          {% if course.language %}<span>{{ icon("globe", "h-4 w-4") }} {{ course.language }}</span>{% endif %}
+        </div>
+        {% if matched %}
+        <div class="mt-3 flex flex-wrap items-center gap-1.5">
+          <span class="text-[0.7rem] font-bold uppercase tracking-wide text-base-content/50">Matched:</span>
+          {% for skill in matched %}
+          <span class="badge badge-success badge-outline badge-sm">{{ skill }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+        <div class="mt-4 flex items-center justify-between border-t border-base-300 pt-4">
+          <span class="font-display text-xl font-extrabold text-primary">${{ "{:,}".format(course.price_subsidized) }}</span>
+          {% if current_user.is_authenticated %}
+          <button class="btn-fav-rec {% if course.course_id in (favorites | map(attribute='course_id') | list) %}favorited{% endif %}"
+                  data-course-id="{{ course.course_id }}"
+                  data-title="{{ course.title | e }}"
+                  data-provider="{{ course.provider | e }}"
+                  data-language="{{ course.language | default('English') }}"
+                  onclick="toggleRecFavorite(this)" aria-label="Toggle favorite">
+            <span class="heart heart-outline">{{ icon("heart", "h-4 w-4") }}</span>
+            <span class="heart heart-filled">{{ icon_filled("heart", "h-4 w-4") }}</span>
+          </button>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- Course detail modal -->
+  <div id="dashCourseModal" class="modal-overlay">
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeDashModal()" aria-label="Close">&times;</button>
+      <h2 id="dashModalTitle" class="modal-title"></h2>
+      <div class="modal-section">
+        <h3 class="modal-section-title">{{ icon("clipboard-list", "h-4 w-4") }} What You Will Learn</h3>
+        <div id="dashModalOutcomes" class="modal-content-text"></div>
+      </div>
+      <div class="modal-section">
+        <h3 class="modal-section-title">{{ icon("check-circle", "h-4 w-4") }} Prerequisites</h3>
+        <div id="dashModalPrereqs" class="modal-content-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="mt-12 flex flex-wrap gap-3">
+    <a href="{{ url_for('resume.upload') }}" class="btn btn-primary gap-2">{{ icon("file-text", "h-4 w-4") }} Analyze New Resume</a>
+    <a href="{{ url_for('career.index') }}" class="btn btn-outline gap-2">{{ icon("search", "h-4 w-4") }} Browse Courses</a>
+    <a href="{{ url_for('dashboard.analyses') }}" class="btn btn-ghost gap-2">{{ icon("bar-chart", "h-4 w-4") }} View All Analyses</a>
+  </div>
+</div>
+
+<script>
+function removeFavorite(courseId) {
+  fetch('/dashboard/favorites/remove', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({course_id: courseId})
+  }).then(r => r.json()).then(data => { if (data.success) location.reload(); });
+}
+
+function toggleRecFavorite(btn) {
+  const courseId = btn.dataset.courseId;
+  const isFav = btn.classList.contains('favorited');
+  const url = isFav ? '/dashboard/favorites/remove' : '/dashboard/favorites/add';
+  fetch(url, {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ course_id: courseId, course_title: btn.dataset.title, course_provider: btn.dataset.provider, course_language: btn.dataset.language || 'English' })
+  }).then(r => r.json()).then(data => { if (data.success) btn.classList.toggle('favorited'); });
+}
+
+function filterFavorites() {
+  const selected = document.getElementById('langFilter').value;
+  const cards = document.querySelectorAll('#favoritesGrid .favorite-card');
+  let visible = 0;
+  cards.forEach(card => {
+    const lang = card.dataset.language || 'English';
+    const show = selected === 'all' || lang.includes(selected);
+    card.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  const noMsg = document.getElementById('noFavMessage');
+  if (noMsg) noMsg.classList.toggle('hidden', visible !== 0);
+}
+
+function openDashModal(btn) {
+  const title = btn.dataset.title || '', outcomes = btn.dataset.outcomes || '', prereqs = btn.dataset.prereqs || '';
+  document.getElementById('dashModalTitle').textContent = title;
+
+  function renderText(el, text, emptyMsg) {
+    var CR = String.fromCharCode(13), LF = String.fromCharCode(10), BULLET = String.fromCharCode(8226);
+    if (!text || !text.trim()) { el.innerHTML = '<p class="modal-na">' + emptyMsg + '</p>'; return; }
+    var cleaned = '';
+    for (var ci = 0; ci < text.length; ci++) { if (text[ci] !== CR) cleaned += text[ci]; }
+    var lines = cleaned.split(LF).map(function(l){ return l.trim(); }).filter(Boolean);
+    var isList = lines.some(function(l){ return l.charAt(0) === '*' || l.charAt(0) === '-' || l.charAt(0) === BULLET; });
+    if (isList) {
+      el.innerHTML = '<ul>' + lines.map(function(l){ var c0 = l.charAt(0); if (c0 === '*' || c0 === '-' || c0 === BULLET) l = l.slice(1).trim(); return l ? '<li>' + l + '</li>' : ''; }).join('') + '</ul>';
+    } else { el.innerHTML = lines.map(function(l){ return '<p>' + l + '</p>'; }).join(''); }
+  }
+
+  renderText(document.getElementById('dashModalOutcomes'), outcomes, 'Not specified');
+  renderText(document.getElementById('dashModalPrereqs'), prereqs, 'No prerequisites listed');
+  document.getElementById('dashCourseModal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+  dashModalOpenedAt = Date.now();
+}
+
+// Timestamp of the last open, used to ignore the trailing click of a
+// double-click (or a stray second tap) that would otherwise land on the
+// freshly-shown backdrop and immediately dismiss the modal.
+let dashModalOpenedAt = 0;
+
+function closeDashModal() {
+  document.getElementById('dashCourseModal').classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+// Dismiss on backdrop click only when the press both starts and ends on the
+// overlay itself, and not within the brief window right after opening. This
+// keeps click-outside-to-close working while preventing the modal from
+// flashing shut on the same interaction that opened it.
+(function () {
+  const overlay = document.getElementById('dashCourseModal');
+  let pressedOnOverlay = false;
+  overlay.addEventListener('mousedown', e => { pressedOnOverlay = (e.target === overlay); });
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay && pressedOnOverlay && Date.now() - dashModalOpenedAt > 300) {
+      closeDashModal();
+    }
+    pressedOnOverlay = false;
+  });
+})();
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') { document.getElementById('dashCourseModal').classList.remove('active'); document.body.style.overflow = ''; }
+});
+</script>
+{% endblock %}

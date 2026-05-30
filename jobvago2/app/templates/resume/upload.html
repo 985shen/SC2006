@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Resume Analysis · Jobvago{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-3xl px-4 py-10">
+  <div class="reveal text-center">
+    <h1 class="flex items-center justify-center gap-2 font-display text-3xl font-extrabold tracking-tight">{{ icon("file-text", "h-7 w-7 text-primary") }} Resume Analysis &amp; Editor</h1>
+    <p class="mt-2 text-base-content/60">Get AI-powered feedback on your resume, or edit it directly</p>
+  </div>
+
+  {% if has_resume %}
+  <div class="mt-8 flex flex-col items-start justify-between gap-4 rounded-2xl border-2 border-primary/40 bg-primary/5 p-6 sm:flex-row sm:items-center">
+    <div class="flex items-center gap-4">
+      <span class="text-success">{{ icon("file-text", "h-8 w-8") }}</span>
+      <div>
+        <h3 class="font-display text-lg font-bold">Current Resume</h3>
+        <p class="text-sm text-base-content/60">Uploaded {{ current_user.resume_uploaded_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
+      </div>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <a href="{{ url_for('resume.edit') }}" class="btn btn-primary btn-sm gap-1">{{ icon("pencil", "h-4 w-4") }} Edit</a>
+      <a href="{{ url_for('resume.download_resume') }}" class="btn btn-outline btn-sm gap-1">{{ icon("download", "h-4 w-4") }} Download</a>
+      <button onclick="deleteResume()" class="btn btn-outline btn-error btn-sm gap-1">{{ icon("trash", "h-4 w-4") }} Delete</button>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="mt-8 rounded-3xl border-2 border-dashed border-base-300 bg-base-100 p-8 text-center sm:p-12">
+    <div class="flex justify-center text-primary">{{ icon("upload", "h-12 w-12") }}</div>
+    <h3 class="mt-4 font-display text-xl font-bold">{{ 'Upload New Resume' if has_resume else 'Upload Your Resume' }}</h3>
+    <p class="mt-1 text-sm text-base-content/55">Supported format: PDF only (max 10MB)</p>
+
+    <form method="POST" enctype="multipart/form-data" id="uploadForm" class="mt-7">
+      <input type="file" name="resume" id="fileInput" accept=".pdf" required onchange="updateFileName()" class="hidden">
+      <label for="fileInput" class="btn btn-outline btn-wide gap-2">
+        {{ icon("folder", "h-4 w-4") }} <span id="fileLabel">Choose PDF file</span>
+      </label>
+
+      <div class="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
+        <button type="submit" name="action" value="analyze" class="btn btn-primary gap-2 shadow-sm">{{ icon("search", "h-4 w-4") }} Analyze Resume</button>
+        <button type="submit" name="action" value="edit" class="btn btn-outline gap-2">{{ icon("pencil", "h-4 w-4") }} Edit Resume</button>
+      </div>
+    </form>
+
+    <div class="mt-8 flex flex-col gap-3 border-t border-base-300 pt-6 text-left">
+      <div class="flex items-center gap-3 text-sm text-base-content/70"><span class="text-success">{{ icon("check-circle", "h-5 w-5") }}</span> Instant AI analysis with actionable feedback</div>
+      <div class="flex items-center gap-3 text-sm text-base-content/70"><span class="text-success">{{ icon("check-circle", "h-5 w-5") }}</span> Edit content, reorder sections, update details</div>
+      <div class="flex items-center gap-3 text-sm text-base-content/70"><span class="text-success">{{ icon("check-circle", "h-5 w-5") }}</span> Download a professionally formatted PDF</div>
+    </div>
+  </div>
+</div>
+
+<script>
+function updateFileName() {
+  const input = document.getElementById('fileInput');
+  const label = document.getElementById('fileLabel');
+  if (input.files.length > 0) label.textContent = input.files[0].name;
+}
+function deleteResume() {
+  if (!confirm('Are you sure you want to delete your resume? This action cannot be undone.')) return;
+  fetch('{{ url_for("resume.delete_resume") }}', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+    .then(r => r.json())
+    .then(data => { if (data.success) window.location.reload(); else alert('Error deleting resume: ' + data.error); })
+    .catch(err => alert('Error: ' + err));
+}
+</script>
+{% endblock %}

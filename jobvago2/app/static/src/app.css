@@ -1,0 +1,352 @@
+/* ===========================================================================
+   jobvago — Tailwind CSS v4 + daisyUI v5 source stylesheet
+   ---------------------------------------------------------------------------
+   Build:  cd frontend && npm run build   (outputs ../app/static/css/app.css)
+   Watch:  cd frontend && npm run watch
+   ===========================================================================*/
+
+@import "tailwindcss";
+
+/* Scan every template (HTML + the inline JS inside them) for class names so
+   dynamically-injected markup keeps its styles after tree-shaking. */
+@source "../../templates/**/*.html";
+
+/* Enable our two custom themes (defined below) and nothing else. */
+@plugin "daisyui" {
+  themes: jobvago --default, jobvago-dark --prefersdark;
+}
+
+/* ---------------------------------------------------------------------------
+   Typography — distinctive pairing, deliberately not Inter/Roboto/Arial.
+   Bricolage Grotesque (display) + Hanken Grotesk (body), loaded in base.html.
+   --------------------------------------------------------------------------- */
+@theme {
+  --font-sans: "Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: "Bricolage Grotesque", "Hanken Grotesk", ui-sans-serif, sans-serif;
+}
+
+/* ---------------------------------------------------------------------------
+   Light theme: warm "paper" base, deep teal primary, warm amber accent.
+   --------------------------------------------------------------------------- */
+@plugin "daisyui/theme" {
+  name: "jobvago";
+  default: true;
+  prefersdark: false;
+  color-scheme: light;
+
+  --color-base-100: oklch(99% 0.006 95);
+  --color-base-200: oklch(96.5% 0.009 90);
+  --color-base-300: oklch(92.5% 0.013 88);
+  --color-base-content: oklch(27% 0.03 230);
+
+  --color-primary: oklch(52% 0.105 195);
+  --color-primary-content: oklch(98% 0.012 195);
+  --color-secondary: oklch(44% 0.05 250);
+  --color-secondary-content: oklch(98% 0.01 250);
+  --color-accent: oklch(72% 0.155 62);
+  --color-accent-content: oklch(26% 0.06 62);
+  --color-neutral: oklch(29% 0.025 235);
+  --color-neutral-content: oklch(96% 0.01 95);
+
+  --color-info: oklch(64% 0.11 230);
+  --color-info-content: oklch(98% 0.01 230);
+  --color-success: oklch(62% 0.13 155);
+  --color-success-content: oklch(98% 0.01 155);
+  --color-warning: oklch(78% 0.15 75);
+  --color-warning-content: oklch(28% 0.06 75);
+  --color-error: oklch(60% 0.2 24);
+  --color-error-content: oklch(98% 0.01 24);
+
+  --radius-selector: 0.5rem;
+  --radius-field: 0.65rem;
+  --radius-box: 1rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Dark theme: deep slate base, luminous teal, warm amber.
+   --------------------------------------------------------------------------- */
+@plugin "daisyui/theme" {
+  name: "jobvago-dark";
+  default: false;
+  prefersdark: true;
+  color-scheme: dark;
+
+  --color-base-100: oklch(23% 0.025 245);
+  --color-base-200: oklch(19% 0.024 245);
+  --color-base-300: oklch(28% 0.03 245);
+  --color-base-content: oklch(92% 0.015 200);
+
+  --color-primary: oklch(74% 0.13 188);
+  --color-primary-content: oklch(20% 0.04 200);
+  --color-secondary: oklch(72% 0.05 250);
+  --color-secondary-content: oklch(18% 0.03 250);
+  --color-accent: oklch(80% 0.14 70);
+  --color-accent-content: oklch(22% 0.06 70);
+  --color-neutral: oklch(31% 0.025 245);
+  --color-neutral-content: oklch(92% 0.015 200);
+
+  --color-info: oklch(72% 0.12 230);
+  --color-info-content: oklch(18% 0.03 230);
+  --color-success: oklch(72% 0.14 155);
+  --color-success-content: oklch(18% 0.03 155);
+  --color-warning: oklch(82% 0.15 75);
+  --color-warning-content: oklch(22% 0.05 75);
+  --color-error: oklch(68% 0.19 24);
+  --color-error-content: oklch(18% 0.03 24);
+
+  --radius-selector: 0.5rem;
+  --radius-field: 0.65rem;
+  --radius-box: 1rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Base layer tweaks
+   --------------------------------------------------------------------------- */
+@layer base {
+  html { scroll-behavior: smooth; }
+  body { font-family: var(--font-sans); }
+  h1, h2, h3, h4, .font-display { font-family: var(--font-display); }
+
+  /* Subtle paper grain + corner glows so backgrounds aren't flat fills. */
+  body {
+    background-image:
+      radial-gradient(ellipse 80% 50% at 100% 0%, color-mix(in oklch, var(--color-primary) 9%, transparent), transparent 60%),
+      radial-gradient(ellipse 60% 50% at 0% 100%, color-mix(in oklch, var(--color-accent) 8%, transparent), transparent 55%);
+    background-attachment: fixed;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   A few reusable component conveniences (built on Tailwind/daisyUI tokens)
+   --------------------------------------------------------------------------- */
+@layer components {
+  /* Card lift on hover, used across course/industry/recommendation cards. */
+  .lift {
+    transition: transform .22s cubic-bezier(.4,0,.2,1), box-shadow .22s ease, border-color .22s ease;
+  }
+  .lift:hover { transform: translateY(-4px); }
+
+  /* Animated section reveal on load. */
+  .reveal { animation: reveal .6s cubic-bezier(.16,1,.3,1) both; }
+  @keyframes reveal {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Gradient text used for hero numerals/headlines. */
+  .text-gradient {
+    background: linear-gradient(120deg,
+        var(--color-primary), color-mix(in oklch, var(--color-accent) 70%, var(--color-primary)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Toast notification (created imperatively by inline JS). */
+  .toast-notification {
+    position: fixed; bottom: 1.5rem; left: 50%;
+    transform: translate(-50%, 1.5rem);
+    background: var(--color-neutral); color: var(--color-neutral-content);
+    padding: .7rem 1.25rem; border-radius: var(--radius-field);
+    font-size: .9rem; font-weight: 600; box-shadow: 0 10px 30px rgb(0 0 0 / .25);
+    opacity: 0; pointer-events: none; z-index: 2000;
+    transition: opacity .3s ease, transform .3s cubic-bezier(.16,1,.3,1);
+  }
+  .toast-notification.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* Full-screen loading overlay used by the resume editor. */
+  .loading-overlay {
+    display: none; position: fixed; inset: 0; z-index: 2000;
+    flex-direction: column; align-items: center; justify-content: center; gap: 1rem;
+    background: color-mix(in oklch, var(--color-base-100) 78%, transparent);
+    backdrop-filter: blur(6px); color: var(--color-base-content);
+  }
+  .loading-overlay.active, .loading-overlay.show { display: flex; }
+  .loading-spinner {
+    width: 3rem; height: 3rem; border-radius: 9999px;
+    border: 4px solid color-mix(in oklch, var(--color-primary) 25%, transparent);
+    border-top-color: var(--color-primary); animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Course-detail modal (markup kept, restyled to theme tokens). */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 1000;
+    align-items: center; justify-content: center; padding: 1rem;
+    /* Plain dim (no backdrop-filter): a blurred overlay drops the panel's
+       open animation on some GPUs, leaving the panel stuck at opacity:0. */
+    background: rgba(15, 23, 42, 0.55);
+  }
+  .modal-overlay.active { display: flex; }
+  .modal-box {
+    background: var(--color-base-100); color: var(--color-base-content);
+    border: 1px solid var(--color-base-300);
+    border-radius: var(--radius-box); padding: 2rem;
+    max-width: 640px; width: 100%; max-height: 82vh; overflow-y: auto;
+    position: relative; box-shadow: 0 24px 70px rgb(0 0 0 / .3);
+    opacity: 1;
+  }
+  .modal-close {
+    position: absolute; top: 1rem; right: 1.15rem; background: none; border: none;
+    font-size: 1.6rem; line-height: 1; color: var(--color-base-content);
+    opacity: .5; cursor: pointer; transition: opacity .15s;
+  }
+  .modal-close:hover { opacity: 1; }
+  .modal-title { font-size: 1.2rem; font-weight: 700; margin: 0 2rem 1.4rem 0; line-height: 1.4; }
+  .modal-section { margin-bottom: 1.4rem; }
+  .modal-section:last-child { margin-bottom: 0; }
+  .modal-section-title {
+    font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em;
+    color: var(--color-primary); margin: 0 0 .55rem; padding-bottom: .4rem;
+    border-bottom: 2px solid color-mix(in oklch, var(--color-primary) 25%, transparent);
+  }
+  .modal-content-text p, .modal-content-text li {
+    font-size: .92rem; line-height: 1.6; margin: 0 0 .5rem;
+    color: color-mix(in oklch, var(--color-base-content) 85%, transparent);
+  }
+  .modal-content-text ul { margin: 0; padding-left: 1.2rem; }
+  .modal-na { opacity: .6; font-style: italic; }
+
+  /* Favorite heart states (class toggled by inline JS). */
+  .btn-favorite .heart { color: color-mix(in oklch, var(--color-base-content) 35%, transparent); transition: color .2s, transform .2s; }
+  .btn-favorite:hover .heart { color: var(--color-error); transform: scale(1.12); }
+  .btn-favorite.favorited .heart { color: var(--color-error); }
+
+  .btn-fav-rec {
+    display: grid; place-items: center; height: 2rem; width: 2rem; padding: 0;
+    border-radius: 9999px; border: 1px solid var(--color-base-300);
+    background: var(--color-base-100);
+    color: color-mix(in oklch, var(--color-base-content) 35%, transparent);
+    cursor: pointer; transition: all .2s; font-size: 1rem;
+  }
+  .btn-fav-rec:hover { border-color: var(--color-error); color: var(--color-error); }
+  .btn-fav-rec.favorited {
+    background: color-mix(in oklch, var(--color-error) 15%, transparent);
+    border-color: var(--color-error); color: var(--color-error);
+  }
+
+  /* Toast error variant (resume editor uses .toast / .toast-notification). */
+  .toast-notification.error, .toast.error { background: var(--color-error); color: var(--color-error-content); }
+
+  /* ── Resume editor building blocks (class names shared by inline JS) ── */
+  .editor-card {
+    border: 1px solid var(--color-base-300); background: var(--color-base-100);
+    border-radius: var(--radius-box); box-shadow: 0 1px 3px rgb(0 0 0 / .05);
+    margin-bottom: 1.25rem; overflow: hidden;
+  }
+  .card-header {
+    display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+    padding: 1rem 1.25rem; border-bottom: 1px solid var(--color-base-300);
+    background: var(--color-base-200);
+  }
+  .card-header h3 { font-size: 1rem; font-weight: 700; }
+  .card-body { padding: 1.25rem; }
+  .section-title-editable {
+    outline: none; border-radius: var(--radius-field); padding: .15rem .4rem; margin: -0.15rem -0.4rem;
+    transition: background .15s;
+  }
+  .section-title-editable:focus { background: color-mix(in oklch, var(--color-primary) 12%, transparent); }
+  .section-controls { display: flex; gap: .35rem; }
+  .btn-icon {
+    display: grid; place-items: center; height: 2rem; width: 2rem; border: none;
+    border-radius: var(--radius-field); background: var(--color-base-200);
+    cursor: pointer; font-size: .95rem; transition: background .15s, transform .15s;
+  }
+  .btn-icon:hover { background: var(--color-base-300); transform: translateY(-1px); }
+  .btn-icon.btn-danger:hover { background: color-mix(in oklch, var(--color-error) 18%, transparent); }
+
+  .entries-list { display: flex; flex-direction: column; gap: 1rem; }
+  .entry-card {
+    border: 1px solid var(--color-base-300); border-radius: var(--radius-box);
+    padding: 1rem 1.1rem; background: var(--color-base-200);
+  }
+  .entry-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: .75rem; }
+  .entry-label { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--color-base-content); opacity: .55; }
+  .entry-fields { display: flex; flex-direction: column; gap: .75rem; }
+  .field-row { display: grid; grid-template-columns: 1fr; gap: .75rem; }
+  @media (min-width: 640px) { .field-row { grid-template-columns: 2fr 1fr; } }
+  .field-group { display: flex; flex-direction: column; gap: .3rem; }
+  .field-group > label {
+    font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+    color: color-mix(in oklch, var(--color-base-content) 60%, transparent);
+  }
+  /* Style every text input inside the editor like a daisyUI bordered input. */
+  .editor-content input[type="text"] {
+    width: 100%; padding: .55rem .75rem; font-size: .9rem;
+    border: 1px solid var(--color-base-300); border-radius: var(--radius-field);
+    background: var(--color-base-100); color: var(--color-base-content);
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .editor-content input[type="text"]:focus {
+    outline: none; border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-primary) 22%, transparent);
+  }
+  .bullets-container { display: flex; flex-direction: column; gap: .5rem; margin-bottom: .6rem; }
+  .bullet-item { display: flex; align-items: center; gap: .5rem; }
+  .bullet-item .bullet-text { flex: 1; }
+  .btn-add {
+    align-self: flex-start; display: inline-flex; align-items: center; gap: .35rem;
+    padding: .4rem .8rem; font-size: .82rem; font-weight: 600; cursor: pointer;
+    color: var(--color-primary); background: color-mix(in oklch, var(--color-primary) 10%, transparent);
+    border: 1px dashed color-mix(in oklch, var(--color-primary) 40%, transparent);
+    border-radius: var(--radius-field); transition: background .15s;
+  }
+  .btn-add:hover { background: color-mix(in oklch, var(--color-primary) 18%, transparent); }
+  .btn-add-section {
+    width: 100%; padding: .9rem; font-size: .95rem; font-weight: 700; cursor: pointer;
+    color: var(--color-primary); background: transparent;
+    border: 2px dashed color-mix(in oklch, var(--color-primary) 40%, transparent);
+    border-radius: var(--radius-box); transition: background .15s, border-color .15s;
+  }
+  .btn-add-section:hover {
+    background: color-mix(in oklch, var(--color-primary) 8%, transparent);
+    border-color: var(--color-primary);
+  }
+
+  /* ── Inline-SVG icon system (see templates/_icons.html) ── */
+
+  /* Industry icon chip on the career page industry cards. */
+  .industry-icon-chip {
+    display: grid; place-items: center;
+    height: 3rem; width: 3rem; flex-shrink: 0;
+    border-radius: 0.85rem;
+    background: var(--color-base-200);
+    color: var(--color-base-content);
+    box-shadow: inset 0 0 0 1px var(--color-base-300);
+    transition: background .2s, color .2s, box-shadow .2s;
+  }
+  .group:hover .industry-icon-chip { color: var(--color-primary); }
+  .industry-icon-chip.is-active {
+    background: color-mix(in oklch, var(--color-primary) 15%, transparent);
+    color: var(--color-primary);
+    box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--color-primary) 35%, transparent);
+  }
+
+  /* Meta rows (duration / mode / language / rating / reviews): keep each
+     icon+label pair aligned and the icon from stretching. */
+  .course-meta span { display: inline-flex; align-items: center; gap: 0.3rem; }
+  .course-meta svg { flex-shrink: 0; opacity: .85; }
+
+  /* Favorite heart: outline by default, filled when .favorited (on any
+     ancestor — works for both .btn-favorite and .btn-fav-rec). */
+  .heart-outline { display: inline-flex; }
+  .heart-filled { display: none; }
+  .favorited .heart-outline { display: none; }
+  .favorited .heart-filled { display: inline-flex; }
+
+  /* Theme toggle: moon in light mode, sun in dark mode. */
+  .theme-icon { display: inline-flex; }
+  .theme-icon-sun { display: none; }
+  [data-theme="jobvago-dark"] .theme-icon-moon { display: none; }
+  [data-theme="jobvago-dark"] .theme-icon-sun { display: inline-flex; }
+}

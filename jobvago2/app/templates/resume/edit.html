@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Edit Resume · Jobvago{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-4xl px-4 py-8">
+  <div class="reveal mb-6 flex flex-wrap items-center justify-between gap-3">
+    <h1 class="flex items-center gap-2 font-display text-3xl font-extrabold tracking-tight">{{ icon("pencil", "h-7 w-7 text-primary") }} Resume Editor</h1>
+    <div class="flex flex-wrap gap-2">
+      <button onclick="saveResume()" class="btn btn-primary gap-2 shadow-sm">{{ icon("save", "h-4 w-4") }} Save &amp; Download</button>
+      <a href="{{ url_for('resume.upload') }}" class="btn btn-ghost gap-2">{{ icon("x", "h-4 w-4") }} Cancel</a>
+    </div>
+  </div>
+
+  <div class="editor-content">
+    <!-- Name and contact -->
+    <div class="editor-card">
+      <div class="card-header"><h3>Personal Information</h3></div>
+      <div class="card-body">
+        <div class="entry-fields">
+          <div class="field-group">
+            <label>Full Name</label>
+            <input type="text" id="name" value="{{ resume_data.name }}" placeholder="Your Name">
+          </div>
+          <div class="field-group">
+            <label>Contact Information</label>
+            <input type="text" id="contact" value="{{ resume_data.contact }}" placeholder="Email | Phone | LinkedIn">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sections -->
+    <div id="sections-container">
+      {% for section in resume_data.sections %}
+      <div class="editor-card section-card" data-section-index="{{ loop.index0 }}">
+        <div class="card-header">
+          <h3 contenteditable="true" class="section-title-editable">{{ section.title }}</h3>
+          <div class="section-controls">
+            <button onclick="moveSection(this, -1)" class="btn-icon" title="Move Up">↑</button>
+            <button onclick="moveSection(this, 1)" class="btn-icon" title="Move Down">↓</button>
+            <button onclick="deleteSection(this)" class="btn-icon btn-danger" title="Delete Section">{{ icon("trash", "h-4 w-4") }}</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="entries-list">
+            {% for entry in section.entries %}
+            <div class="entry-card">
+              <div class="entry-header">
+                <span class="entry-label">Entry {{ loop.index }}</span>
+                <button onclick="deleteEntry(this)" class="btn-icon btn-danger">{{ icon("x", "h-4 w-4") }}</button>
+              </div>
+              <div class="entry-fields">
+                <div class="field-row">
+                  <div class="field-group">
+                    <label>Organisation / School</label>
+                    <input type="text" class="entry-org" value="{{ entry.org }}" placeholder="Company or University Name">
+                  </div>
+                  <div class="field-group">
+                    <label>Date Range</label>
+                    <input type="text" class="entry-date" value="{{ entry.date }}" placeholder="Jan 2020 - Dec 2023">
+                  </div>
+                </div>
+                <div class="field-group">
+                  <label>Position / Degree</label>
+                  <input type="text" class="entry-role" value="{{ entry.role }}" placeholder="Software Engineer / Bachelor of Computer Science">
+                </div>
+                <div class="field-group">
+                  <label>Bullet Points</label>
+                  <div class="bullets-container">
+                    {% for bullet in entry.bullets %}
+                    <div class="bullet-item">
+                      <input type="text" class="bullet-text" value="{{ bullet }}" placeholder="Describe your achievement or responsibility">
+                      <button onclick="deleteBullet(this)" class="btn-icon btn-danger">{{ icon("x", "h-4 w-4") }}</button>
+                    </div>
+                    {% endfor %}
+                  </div>
+                  <button onclick="addBullet(this)" class="btn-add">+ Add Bullet Point</button>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          <button onclick="addEntry(this)" class="btn-add">+ Add Entry</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <button onclick="addSection()" class="btn-add-section">+ Add New Section</button>
+  </div>
+</div>
+
+<div id="loading-overlay" class="loading-overlay">
+  <div class="loading-spinner"></div>
+  <p id="loading-message" class="font-semibold">Saving your resume...</p>
+</div>
+
+<script>
+function collectResumeData() {
+  const data = { name: document.getElementById('name').value, contact: document.getElementById('contact').value, sections: [] };
+  document.querySelectorAll('.section-card').forEach(sectionCard => {
+    const section = { title: sectionCard.querySelector('.section-title-editable').textContent, entries: [] };
+    sectionCard.querySelectorAll('.entry-card').forEach(entryCard => {
+      const entry = {
+        org: entryCard.querySelector('.entry-org').value,
+        date: entryCard.querySelector('.entry-date').value,
+        role: entryCard.querySelector('.entry-role').value,
+        bullets: []
+      };
+      entryCard.querySelectorAll('.bullet-text').forEach(b => { if (b.value.trim()) entry.bullets.push(b.value.trim()); });
+      section.entries.push(entry);
+    });
+    data.sections.push(section);
+  });
+  return data;
+}
+
+function saveResume() {
+  const data = collectResumeData();
+  showLoading(true, 'Generating your resume...');
+  fetch('{{ url_for("resume.save_edited") }}', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+  })
+  .then(r => r.json())
+  .then(result => {
+    showLoading(false);
+    if (result.success) {
+      window.location.href = result.download_url;
+      showToast('Resume saved successfully!');
+      setTimeout(() => { window.location.href = '{{ url_for("resume.upload") }}'; }, 1500);
+    } else { showToast('Error: ' + result.error, true); }
+  })
+  .catch(err => { showLoading(false); showToast('Error saving resume: ' + err, true); });
+}
+
+function addBullet(btn) {
+  const container = btn.previousElementSibling;
+  const bulletItem = document.createElement('div');
+  bulletItem.className = 'bullet-item';
+  bulletItem.innerHTML = `
+    <input type="text" class="bullet-text" placeholder="Describe your achievement or responsibility">
+    <button onclick="deleteBullet(this)" class="btn-icon btn-danger">${ICON_X}</button>`;
+  container.appendChild(bulletItem);
+}
+function deleteBullet(btn) { btn.parentElement.remove(); }
+
+function addEntry(btn) {
+  const entriesList = btn.previousElementSibling;
+  const entryCount = entriesList.querySelectorAll('.entry-card').length + 1;
+  const entryCard = document.createElement('div');
+  entryCard.className = 'entry-card';
+  entryCard.innerHTML = `
+    <div class="entry-header">
+      <span class="entry-label">Entry ${entryCount}</span>
+      <button onclick="deleteEntry(this)" class="btn-icon btn-danger">${ICON_X}</button>
+    </div>
+    <div class="entry-fields">
+      <div class="field-row">
+        <div class="field-group">
+          <label>Organisation / School</label>
+          <input type="text" class="entry-org" placeholder="Company or University Name">
+        </div>
+        <div class="field-group">
+          <label>Date Range</label>
+          <input type="text" class="entry-date" placeholder="Jan 2020 - Dec 2023">
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Position / Degree</label>
+        <input type="text" class="entry-role" placeholder="Software Engineer / Bachelor of Computer Science">
+      </div>
+      <div class="field-group">
+        <label>Bullet Points</label>
+        <div class="bullets-container"></div>
+        <button onclick="addBullet(this)" class="btn-add">+ Add Bullet Point</button>
+      </div>
+    </div>`;
+  entriesList.appendChild(entryCard);
+}
+function deleteEntry(btn) { if (confirm('Delete this entry?')) btn.closest('.entry-card').remove(); }
+
+function moveSection(btn, direction) {
+  const card = btn.closest('.section-card');
+  const container = document.getElementById('sections-container');
+  const sections = Array.from(container.querySelectorAll('.section-card'));
+  const index = sections.indexOf(card);
+  const newIndex = index + direction;
+  if (newIndex < 0 || newIndex >= sections.length) return;
+  if (direction === -1) container.insertBefore(card, sections[newIndex]);
+  else container.insertBefore(card, sections[newIndex].nextSibling);
+  card.style.outline = '2px solid var(--color-primary)';
+  setTimeout(() => { card.style.outline = ''; }, 300);
+}
+function deleteSection(btn) { if (confirm('Delete this entire section?')) btn.closest('.section-card').remove(); }
+
+function addSection() {
+  const container = document.getElementById('sections-container');
+  const sectionCard = document.createElement('div');
+  sectionCard.className = 'editor-card section-card';
+  sectionCard.innerHTML = `
+    <div class="card-header">
+      <h3 contenteditable="true" class="section-title-editable">New Section</h3>
+      <div class="section-controls">
+        <button onclick="moveSection(this, -1)" class="btn-icon">↑</button>
+        <button onclick="moveSection(this, 1)" class="btn-icon">↓</button>
+        <button onclick="deleteSection(this)" class="btn-icon btn-danger">${ICON_TRASH}</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="entries-list"></div>
+      <button onclick="addEntry(this)" class="btn-add">+ Add Entry</button>
+    </div>`;
+  container.appendChild(sectionCard);
+}
+
+function showLoading(show, message) {
+  const overlay = document.getElementById('loading-overlay');
+  if (show) { document.getElementById('loading-message').textContent = message || 'Processing...'; overlay.classList.add('show'); }
+  else { overlay.classList.remove('show'); }
+}
+
+function showToast(message, isError = false) {
+  const toast = document.createElement('div');
+  toast.className = 'toast-notification' + (isError ? ' error' : '');
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.classList.add('show'), 100);
+  setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3000);
+}
+</script>
+{% endblock %}

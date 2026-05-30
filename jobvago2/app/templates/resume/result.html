@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Resume Grade · Jobvago{% endblock %}
+{% block content %}
+
+{% set grade = analysis.get_grade_breakdown() %}
+
+{% macro subitem(name, s, accent, ai=false) %}
+<div class="rounded-xl bg-base-200/50 p-4">
+  <div class="flex items-start justify-between gap-3">
+    <div class="min-w-0">
+      <div class="flex items-center gap-2 font-semibold text-base-content">
+        {{ name }}
+        {% if ai and s.ai_graded %}<span class="badge badge-secondary badge-xs font-bold">AI</span>{% endif %}
+      </div>
+      <p class="mt-0.5 text-xs text-base-content/60">{{ s.details }}</p>
+      {{ caller() if caller is defined }}
+    </div>
+    <div class="shrink-0 whitespace-nowrap text-right font-bold">{{ s.points }}<span class="text-xs font-normal text-base-content/45"> / {{ s.max }}</span></div>
+  </div>
+  <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-base-300">
+    <div class="bar-fill h-full rounded-full {{ accent }}" data-pct="{{ (s.points / s.max * 100)|int }}"></div>
+  </div>
+</div>
+{% endmacro %}
+
+<style>
+  .ring-fill { transition: stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1); }
+  .bar-fill, .catbar-fill { width: 0; transition: width 1s cubic-bezier(.4,0,.2,1); }
+</style>
+
+<div class="mx-auto max-w-3xl px-4 py-8">
+{% if grade %}
+
+  {% set circ = 408 %}
+  {% set offset = circ - (circ * grade.total / 100) %}
+  {% if grade.total >= 75 %}{% set ring_color = "#10b981" %}
+  {% elif grade.total >= 50 %}{% set ring_color = "#f59e0b" %}
+  {% else %}{% set ring_color = "#ef4444" %}{% endif %}
+
+  <!-- Hero -->
+  <div class="reveal overflow-hidden rounded-3xl border border-base-300 bg-gradient-to-br from-primary/15 via-base-200/60 to-accent/10 p-10 text-center">
+    <p class="text-xs font-bold uppercase tracking-[0.2em] text-base-content/50">Resume Score</p>
+    <div class="relative mx-auto mt-5 h-40 w-40">
+      <svg width="160" height="160" viewBox="0 0 160 160" class="-rotate-90">
+        <circle cx="80" cy="80" r="65" fill="none" stroke="currentColor" class="text-base-300" stroke-width="12"/>
+        <circle id="mainRing" cx="80" cy="80" r="65" fill="none" stroke="{{ ring_color }}" stroke-width="12"
+                stroke-linecap="round" stroke-dasharray="{{ circ }}" stroke-dashoffset="{{ offset }}" class="ring-fill"/>
+      </svg>
+      <div class="absolute inset-0 flex flex-col items-center justify-center">
+        <span class="font-display text-5xl font-extrabold leading-none">{{ grade.total }}</span>
+        <span class="text-sm text-base-content/50">/ 100</span>
+      </div>
+    </div>
+    {% if grade.ollama_online %}
+      <span class="badge badge-secondary mt-4 gap-1 font-semibold">{{ icon("sparkles", "h-3.5 w-3.5") }} AI-Enhanced</span>
+    {% else %}
+      <span class="badge badge-warning mt-4 gap-1 font-semibold">{{ icon("cog", "h-3.5 w-3.5") }} Standard Analysis</span>
+    {% endif %}
+  </div>
+
+  <!-- Category cards -->
+  <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+    {% set cats = [('Impact', grade.impact.score, 40, 'bg-primary', 'text-primary'),
+                   ('Presentation', grade.presentation.score, 30, 'bg-success', 'text-success'),
+                   ('Competencies', grade.competencies.score, 30, 'bg-warning', 'text-warning')] %}
+    {% for label, sc, mx, barclass, txtclass in cats %}
+    <div class="rounded-2xl border border-base-300 bg-base-100 p-5 shadow-sm">
+      <h3 class="text-xs font-bold uppercase tracking-wide {{ txtclass }}">{{ label }}</h3>
+      <div class="mt-2 flex items-baseline gap-1">
+        <span class="font-display text-3xl font-extrabold">{{ sc }}</span>
+        <span class="text-sm text-base-content/45">/ {{ mx }}</span>
+      </div>
+      <div class="mt-3 h-2 overflow-hidden rounded-full bg-base-300">
+        <div class="catbar-fill h-full rounded-full {{ barclass }}" data-pct="{{ (sc / mx * 100)|int }}"></div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Impact breakdown -->
+  <section class="mt-10">
+    <h2 class="mb-3 border-l-4 border-primary pl-3 text-sm font-bold uppercase tracking-wider text-primary">Impact Breakdown</h2>
+    <div class="flex flex-col gap-3">
+      {% set b = grade.impact.breakdown %}
+      {% call subitem('Action-Oriented', b.action_oriented, 'bg-primary') %}
+        {% if b.action_oriented.found %}
+        <div class="mt-2 flex flex-wrap gap-1">{% for v in b.action_oriented.found[:12] %}<span class="badge badge-info badge-sm">{{ v }}</span>{% endfor %}</div>
+        {% endif %}
+      {% endcall %}
+      {{ subitem('Specifics & Metrics', b.specifics, 'bg-primary') }}
+      {% call subitem('Word Over-Usage', b.over_usage, 'bg-primary') %}
+        {% if b.over_usage.repeated_words %}
+        <div class="mt-2 flex flex-wrap gap-1">{% for w, c in b.over_usage.repeated_words %}<span class="badge badge-error badge-sm">{{ w }} ×{{ c }}</span>{% endfor %}</div>
+        {% endif %}
+      {% endcall %}
+      {% call subitem('Avoided Filler Words', b.avoided_words, 'bg-primary') %}
+        {% if b.avoided_words.flagged_words %}
+        <div class="mt-2 flex flex-wrap gap-1">{% for w, c in b.avoided_words.flagged_words.items() %}<span class="badge badge-error badge-sm">"{{ w }}" ×{{ c }}</span>{% endfor %}</div>
+        {% endif %}
+      {% endcall %}
+      {{ subitem('Positions of Responsibility', b.positions_of_responsibility, 'bg-primary', ai=true) }}
+      {{ subitem('Extra-Curricular Activities', b.extracurricular, 'bg-primary', ai=true) }}
+    </div>
+  </section>
+
+  <!-- Presentation breakdown -->
+  <section class="mt-8">
+    <h2 class="mb-3 border-l-4 border-success pl-3 text-sm font-bold uppercase tracking-wider text-success">Presentation Breakdown</h2>
+    <div class="flex flex-col gap-3">
+      {% set b = grade.presentation.breakdown %}
+      {{ subitem('Number of Pages', b.page_count, 'bg-success') }}
+      {{ subitem('Contact Information', b.contact_info, 'bg-success') }}
+      {% call subitem('Spell Check', b.spell_check, 'bg-success') %}
+        {% if b.spell_check.errors %}
+        <div class="mt-2 flex flex-wrap gap-1">{% for w in b.spell_check.errors %}<span class="badge badge-error badge-sm">{{ w }}</span>{% endfor %}</div>
+        {% endif %}
+      {% endcall %}
+    </div>
+  </section>
+
+  <!-- Competencies breakdown -->
+  <section class="mt-8">
+    <h2 class="mb-3 border-l-4 border-warning pl-3 text-sm font-bold uppercase tracking-wider text-warning">Competencies Breakdown</h2>
+    <div class="flex flex-col gap-3">
+      {% set comp_labels = [('analytical','Analytical Skills'),('communication','Communication Skills'),('leadership','Leadership Skills'),('teamwork','Teamwork Skills'),('initiative','Initiative Skills')] %}
+      {% for key, label in comp_labels %}
+        {% if key in grade.competencies.breakdown %}
+          {% set s = grade.competencies.breakdown[key] %}
+          {% call subitem(label, s, 'bg-warning', ai=true) %}
+            {% if not s.ai_graded and s.matched_keywords %}
+            <div class="mt-2 flex flex-wrap gap-1">{% for kw in s.matched_keywords %}<span class="badge badge-info badge-sm">{{ kw }}</span>{% endfor %}</div>
+            {% endif %}
+          {% endcall %}
+        {% endif %}
+      {% endfor %}
+    </div>
+  </section>
+
+{% else %}
+  <div class="reveal rounded-3xl border border-base-300 bg-gradient-to-br from-primary/15 to-accent/10 p-10 text-center">
+    <p class="text-xs font-bold uppercase tracking-[0.2em] text-base-content/50">Resume Analysis</p>
+    <div class="mt-3 font-display text-5xl font-extrabold text-primary">{{ analysis.score }}<span class="text-2xl text-base-content/40"> / 10</span></div>
+  </div>
+  <div class="mt-6 rounded-2xl border border-base-300 bg-base-100 p-6 shadow-sm">
+    <h3 class="font-display text-lg font-bold">Feedback</h3>
+    <p class="mt-2 text-base-content/75">{{ analysis.feedback }}</p>
+  </div>
+{% endif %}
+
+  <div class="mt-10 flex flex-wrap justify-center gap-3">
+    <a href="{{ url_for('resume.upload') }}" class="btn btn-primary">Analyse another resume</a>
+    <a href="{{ url_for('dashboard.index') }}" class="btn btn-outline">Back to dashboard</a>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var ring = document.getElementById('mainRing');
+  if (ring) {
+    var target = ring.getAttribute('stroke-dashoffset');
+    ring.style.strokeDashoffset = ring.getAttribute('stroke-dasharray');
+    setTimeout(function() { ring.style.strokeDashoffset = target; }, 60);
+  }
+  document.querySelectorAll('[data-pct]').forEach(function(el) {
+    setTimeout(function(){ el.style.width = el.getAttribute('data-pct') + '%'; }, 80);
+  });
+});
+</script>
+{% endblock %}
