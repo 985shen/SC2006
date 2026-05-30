@@ -1,6 +1,6 @@
 # Jobvago2
 
-- Visual and performance enhancements over Jobvago, see [`README.md`](SC2006/README.md) for more information
+- Visual and performance enhancements over Jobvago, see [`README.md`](../README.md) for more information
 
 ---
 
