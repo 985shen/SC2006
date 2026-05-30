@@ -207,7 +207,7 @@ On startup the app prints whether native acceleration is active. To confirm manu
 python3 -c "from app.services._fast import NATIVE_AVAILABLE; print(NATIVE_AVAILABLE)"
 ```
 
-Behaviour is identical with or without the extension, and the full test suite passes either way. See [`optimisations.md`](optimisations.md) for the measured before/after numbers.
+Behaviour is identical with or without the extension, and the full test suite passes either way. See [`optimisations.md`](jobvago2/optimisations.md) for the measured before/after numbers.
 
 ![Course-filter latency: optimisation on vs off](jobvago2/optimisation_benchmark.png)
 
