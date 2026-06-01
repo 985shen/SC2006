@@ -19,6 +19,9 @@ Built with Flask, SQLite, Tailwind CSS, and vanilla JavaScript. Data is sourced 
 
 ---
 
+## Demo video
+[Demo video](https://youtu.be/rUHVzCvfcpk)
+
 ## Features
 
 ### Industry Dashboard
